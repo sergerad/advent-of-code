@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.44"
+itertools = "0.13.0"
 
 [[bin]]
 name = "y2023d1"
