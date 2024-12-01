@@ -1,0 +1,8 @@
+run day part:
+    cargo run -p day-{{day}} --bin part-{{part}}
+test day part:
+    cargo nextest run -p day-{{day}} part-{{part}}
+bench-all:
+    cargo bench -q > benchmarks.txt
+bench day part:
+    cargo bench --bench day-{{day}}-bench part-{{part}} >> {{day}}.bench.txt
