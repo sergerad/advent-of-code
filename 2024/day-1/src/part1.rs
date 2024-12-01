@@ -1,20 +1,13 @@
-use std::{
-    collections::BinaryHeap,
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::collections::BinaryHeap;
 
-fn main() {
-    // Read the input file.
-    let file = File::open("./day-1/input.txt").unwrap();
-    let reader = BufReader::new(file);
-
+#[tracing::instrument]
+pub fn process(input: &str) -> miette::Result<String> {
     // Parse the input file into two heaps.
-    let (heap_a, heap_b) = reader.lines().fold(
+    let (heap_a, heap_b) = input.lines().fold(
         (BinaryHeap::new(), BinaryHeap::new()),
         |(mut heap_a, mut heap_b), line| {
             // Parse the line into two numbers.
-            if let Some((a, b)) = line.unwrap().split_once("   ") {
+            if let Some((a, b)) = line.split_once("   ") {
                 // Parse the numbers.
                 let a = a.parse::<i32>().unwrap();
                 let b = b.parse::<i32>().unwrap();
@@ -34,6 +27,22 @@ fn main() {
 
     // Calculate the sum of the absolute differences.
     let sum = zip.map(|(a, b)| (a - b).abs()).sum::<i32>();
+    Ok(format!("{}", sum))
+}
 
-    println!("{sum}");
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process() -> miette::Result<()> {
+        let input = "3   4
+4   3
+2   5
+1   3
+3   9
+3   3";
+        assert_eq!("11", process(input)?);
+        Ok(())
+    }
 }

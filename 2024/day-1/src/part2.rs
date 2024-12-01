@@ -1,20 +1,13 @@
-use std::{
-    collections::BinaryHeap,
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::collections::BinaryHeap;
 
-fn main() {
-    // Read the input file.
-    let file = File::open("./day-1/input.txt").unwrap();
-    let reader = BufReader::new(file);
-
+#[tracing::instrument]
+pub fn process(input: &str) -> miette::Result<String> {
     // Parse the input file into two heaps.
-    let (heap_a, heap_b) = reader.lines().fold(
+    let (heap_a, heap_b) = input.lines().fold(
         (BinaryHeap::new(), BinaryHeap::new()),
         |(mut heap_a, mut heap_b), line| {
             // Parse the line into two numbers.
-            if let Some((a, b)) = line.unwrap().split_once("   ") {
+            if let Some((a, b)) = line.split_once("   ") {
                 // Parse the numbers.
                 let a = a.parse::<i32>().unwrap();
                 let b = b.parse::<i32>().unwrap();
@@ -50,5 +43,22 @@ fn main() {
     // Multiply each element in the first list by the number of times it appears in the second list.
     let zip = sorted_a.iter().zip(counts);
     let sum = zip.map(|(a, count)| a * count).sum::<i32>();
-    println!("{sum}");
+    Ok(format!("{}", sum))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_process() -> miette::Result<()> {
+        let input = "3   4
+4   3
+2   5
+1   3
+3   9
+3   3";
+        assert_eq!("31", process(input)?);
+        Ok(())
+    }
 }

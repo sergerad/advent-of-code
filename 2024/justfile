@@ -1,8 +1,11 @@
 run day part:
-    cargo run -p day-{{day}} --bin part-{{part}}
+    cargo run -p day-{{day}} --bin part{{part}}
 test day part:
-    cargo nextest run -p day-{{day}} part-{{part}}
+    cargo nextest run -p day-{{day}} part{{part}}
 bench-all:
     cargo bench -q > benchmarks.txt
 bench day part:
-    cargo bench --bench day-{{day}}-bench part-{{part}} >> {{day}}.bench.txt
+    cargo bench --bench day-{{day}}-bench part{{part}} >> day-{{day}}.bench.txt
+# create the directory for a new day's puzzle and fetch the input
+create day:
+    cargo generate --path ./daily-template --name day-{{day}}
