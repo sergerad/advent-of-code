@@ -1,26 +1,17 @@
 use itertools::Itertools;
 
+use crate::check_pair_safety;
+
 #[tracing::instrument]
 pub fn process(input: &str) -> miette::Result<String> {
     let safe_count = input.lines().fold(0, |safe, line| {
         if line
             .split_whitespace()
             .tuple_windows::<(_, _)>()
-            .try_fold(i32::MAX, |sign, (a, b)| {
+            .try_fold(None, |sign, (a, b)| {
                 let a = a.parse::<i32>().unwrap();
                 let b = b.parse::<i32>().unwrap();
-                let diff = b - a;
-                let diff_sign = diff.signum();
-                match diff.abs() {
-                    1..=3 => {
-                        if sign == i32::MAX || sign == diff_sign {
-                            Ok(diff_sign)
-                        } else {
-                            Err(miette::miette!("{line} wrong sign {diff} ({a}, {b})"))
-                        }
-                    }
-                    _ => Err(miette::miette!("{line} wrong diff {diff} ({a}, {b})")),
-                }
+                check_pair_safety(sign, a, b)
             })
             .is_ok()
         {
