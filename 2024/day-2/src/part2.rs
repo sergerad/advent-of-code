@@ -1,31 +1,25 @@
 use itertools::Itertools;
 
-use crate::check_pair_safety;
+use crate::{check_pair_safety, is_safe, parse};
 
 #[tracing::instrument]
-pub fn process(input: &str) -> miette::Result<String> {
-    let safe_count = input.lines().fold(0, |safe, line| {
-        let nums = line
-            .split_whitespace()
-            .map(|n| n.parse::<i32>().unwrap())
-            .collect_vec();
-        if nums
-            .iter()
-            .tuple_windows::<(_, _)>()
-            .try_fold(None, |sign, (&a, &b)| check_pair_safety(sign, a, b))
-            .is_ok()
-            || nums.iter().combinations(nums.len() - 1).any(|nums| {
-                nums.iter()
-                    .tuple_windows::<(_, _)>()
-                    .try_fold(None, |sign, (&a, &b)| check_pair_safety(sign, *a, *b))
-                    .is_ok()
-            })
-        {
-            safe + 1
-        } else {
-            safe
-        }
-    });
+pub fn process(input: &'static str) -> miette::Result<String> {
+    let (_, reports) = parse(input).map_err(|e| miette::miette!(e))?;
+    let safe_count = reports
+        .iter()
+        .filter(|&report| {
+            if is_safe(report) {
+                true
+            } else {
+                report.iter().combinations(report.len() - 1).any(|nums| {
+                    nums.iter()
+                        .tuple_windows::<(_, _)>()
+                        .try_fold(None, |sign, (&a, &b)| check_pair_safety(sign, *a, *b))
+                        .is_ok()
+                })
+            }
+        })
+        .count();
     Ok(format!("{}", safe_count))
 }
 

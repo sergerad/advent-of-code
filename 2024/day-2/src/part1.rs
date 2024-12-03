@@ -1,25 +1,9 @@
-use itertools::Itertools;
+use crate::{is_safe, parse};
 
-use crate::check_pair_safety;
-
-#[tracing::instrument]
-pub fn process(input: &str) -> miette::Result<String> {
-    let safe_count = input.lines().fold(0, |safe, line| {
-        if line
-            .split_whitespace()
-            .tuple_windows::<(_, _)>()
-            .try_fold(None, |sign, (a, b)| {
-                let a = a.parse::<i32>().unwrap();
-                let b = b.parse::<i32>().unwrap();
-                check_pair_safety(sign, a, b)
-            })
-            .is_ok()
-        {
-            safe + 1
-        } else {
-            safe
-        }
-    });
+#[tracing::instrument(skip(input))]
+pub fn process(input: &'static str) -> miette::Result<String> {
+    let (_, reports) = parse(input).map_err(|e| miette::miette!(e))?;
+    let safe_count = reports.iter().filter(|report| is_safe(report)).count();
     Ok(format!("{}", safe_count))
 }
 
