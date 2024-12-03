@@ -1,9 +1,39 @@
-use crate::parse_mul_expressions;
+use nom::{
+    bytes::complete::tag,
+    character::complete::{self, anychar},
+    multi::{many1, many_till},
+    sequence::{delimited, separated_pair},
+    IResult, Parser,
+};
+
+#[derive(Debug)]
+enum Instruction {
+    Mul(u32, u32),
+}
+
+fn parse_mul(input: &str) -> IResult<&str, Instruction> {
+    let (input, _) = tag("mul")(input)?;
+    let (input, pair) = delimited(
+        tag("("),
+        separated_pair(complete::u32, tag(","), complete::u32),
+        tag(")"),
+    )(input)?;
+    Ok((input, Instruction::Mul(pair.0, pair.1)))
+}
+
+fn parse(input: &str) -> IResult<&str, Vec<Instruction>> {
+    many1(many_till(anychar, parse_mul).map(|(_, instruction)| instruction))(input)
+}
 
 #[tracing::instrument(skip(input), ret)]
 pub fn process(input: &'static str) -> miette::Result<String> {
-    let (_, tuples) = parse_mul_expressions(input).map_err(|e| miette::miette!(e))?;
-    let sum: i32 = tuples.iter().map(|(a, b)| a * b).sum();
+    let (_, instructions) = parse(input).map_err(|e| miette::miette!(e))?;
+    let sum: u32 = instructions
+        .iter()
+        .map(|instruction| match instruction {
+            Instruction::Mul(a, b) => a * b,
+        })
+        .sum();
     Ok(format!("{}", sum))
 }
 
