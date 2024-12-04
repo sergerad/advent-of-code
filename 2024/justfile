@@ -1,7 +1,7 @@
 run day part:
     cargo run -p day-{{day}} --bin part{{part}}
 test day part:
-    cargo nextest run -p day-{{day}} part{{part}}
+    cargo nextest run -p day-{{day}} part{{part}} --no-capture
 bench-all:
     cargo bench -q > benchmarks.txt
 bench day part:
