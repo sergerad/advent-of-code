@@ -1,7 +1,7 @@
 use std::vec;
 
 use nom::{
-    character::complete::{self, line_ending, space1},
+    character::complete::{self, line_ending},
     multi::separated_list1,
     IResult,
 };
@@ -58,55 +58,38 @@ const DIRECTIONS: [(i32, i32); 8] = [
 
 #[tracing::instrument]
 pub fn process(input: &'static str) -> miette::Result<String> {
-    // Parse the input
-    let (input, matrix) = parse(input).map_err(|e| miette::miette!(e))?;
-    // Store the input in a 2D vector (vec![vec![]])
-    // For each X character, store its (x,y) in vec, vec![(x,y)]
+    let (_, matrix) = parse(input).map_err(|e| miette::miette!(e))?;
     let matrix = IndexedMatrix::new(matrix);
-    let x = matrix.index.clone();
-    //let xm = vec![];
-    let xm: Vec<(i32, i32, (i32, i32))> = x.iter().fold(vec![], |mut xm, (x, y)| {
+    let xmas_count = matrix.index.iter().fold(0, |mut xmas_count, (x, y)| {
         for (dx, dy) in DIRECTIONS.iter() {
+            let mut next = 'M';
             let mut x = x + dx;
             let mut y = y + dy;
             while x >= 0 && x < matrix.cols as i32 && y >= 0 && y < matrix.rows as i32 {
-                if matrix.matrix[y as usize][x as usize] == 'M' {
-                    xm.push((x, y, (*dx, *dy)));
+                if matrix.matrix[y as usize][x as usize] == next {
+                    match next {
+                        'M' => {
+                            next = 'A';
+                        }
+                        'A' => {
+                            next = 'S';
+                        }
+                        'S' => {
+                            xmas_count += 1;
+                            break;
+                        }
+                        _ => break,
+                    }
+                } else {
+                    break;
                 }
                 x += dx;
                 y += dy;
             }
         }
-        xm
+        xmas_count
     });
-    let xma: Vec<(i32, i32, (i32, i32))> = xm.iter().fold(vec![], |mut xma, (x, y, (dx, dy))| {
-        let mut x = x + dx;
-        let mut y = y + dy;
-        while x >= 0 && x < matrix.cols as i32 && y >= 0 && y < matrix.rows as i32 {
-            if matrix.matrix[y as usize][x as usize] == 'A' {
-                xma.push((x, y, (*dx, *dy)));
-            }
-            x += dx;
-            y += dy;
-        }
-        xma
-    });
-    let xmas: Vec<(i32, i32, (i32, i32))> =
-        xma.iter().fold(vec![], |mut xmas, (x, y, (dx, dy))| {
-            let mut x = x + dx;
-            let mut y = y + dy;
-            while x >= 0 && x < matrix.cols as i32 && y >= 0 && y < matrix.rows as i32 {
-                if matrix.matrix[y as usize][x as usize] == 'S' {
-                    println!("{} {} {:?}", x, y, (dx, dy));
-                    xmas.push((x, y, (*dx, *dy)));
-                }
-                x += dx;
-                y += dy;
-            }
-            xmas
-        });
-
-    Ok(format!("{}", xmas.len()))
+    Ok(format!("{}", xmas_count))
 }
 
 #[cfg(test)]
@@ -115,8 +98,7 @@ mod tests {
 
     #[test]
     fn test_process() -> miette::Result<()> {
-        let input = "
-MMMSXXMASM
+        let input = "MMMSXXMASM
 MSAMXMSMSA
 AMXSXMAAMM
 MSAMASMSMX
