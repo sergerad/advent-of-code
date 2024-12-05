@@ -1,10 +1,12 @@
+use std::collections::HashSet;
+
 use itertools::Itertools;
 
 use nom::{
     bytes::complete::take_while,
     character::complete::{self, char, line_ending},
-    multi::separated_list1,
-    sequence::separated_pair,
+    multi::{fold_many1, separated_list1},
+    sequence::{separated_pair, terminated},
     IResult,
 };
 
@@ -19,8 +21,15 @@ fn parse_updates(input: &str) -> IResult<&str, Updates> {
     separated_list1(complete::char(','), complete::u32)(input)
 }
 
-fn parse(input: &str) -> IResult<&str, (Vec<Ordering>, Vec<Updates>)> {
-    let (input, orderings) = separated_list1(line_ending, parse_ordering)(input)?;
+fn parse(input: &str) -> IResult<&str, (HashSet<Ordering>, Vec<Updates>)> {
+    let (input, orderings) = fold_many1(
+        terminated(parse_ordering, line_ending),
+        HashSet::default,
+        |mut set: HashSet<(u32, u32)>, ordering| {
+            set.insert(ordering);
+            set
+        },
+    )(input)?;
     let (input, _) = take_while(|c| c == '\n')(input)?;
     let (input, updates) = separated_list1(line_ending, parse_updates)(input)?;
     Ok((input, (orderings, updates)))
@@ -29,7 +38,6 @@ fn parse(input: &str) -> IResult<&str, (Vec<Ordering>, Vec<Updates>)> {
 #[tracing::instrument]
 pub fn process(input: &'static str) -> miette::Result<String> {
     let (_, (orderings, updates)) = parse(input).map_err(|e| miette::miette!(e))?;
-    let orderings: std::collections::HashSet<(u32, u32)> = orderings.into_iter().collect();
     let sum: u32 = updates
         .into_iter()
         .filter(|update| {
