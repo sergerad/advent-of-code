@@ -1,4 +1,4 @@
-use {{crate_name}}::part1::process;
+use day_5::part2::process;
 use miette::Context;
 
 #[tracing::instrument]
@@ -6,7 +6,7 @@ fn main() -> miette::Result<()> {
     tracing_subscriber::fmt::init();
 
     let file = include_str!("../../input.txt");
-    let result = process(file).context("process part 1")?;
+    let result = process(file).context("process part 2")?;
     println!("{}", result);
     Ok(())
 }
