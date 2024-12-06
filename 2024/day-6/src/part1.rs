@@ -1,11 +1,11 @@
-use crate::Game;
+use crate::{Game, GameStatus};
 
 #[tracing::instrument]
 pub fn process(input: &str) -> miette::Result<String> {
     let mut game = Game::from(input);
 
     loop {
-        if let Some(count) = game.update() {
+        if let GameStatus::Finished(count) = game.update() {
             return Ok(count.to_string());
         }
     }
