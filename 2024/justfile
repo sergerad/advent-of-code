@@ -1,5 +1,5 @@
 run day part:
-    cargo run -p day-{{day}} --bin part{{part}}
+    cargo run -p day-{{day}} --bin part{{part}} --release
 test day part:
     cargo nextest run -p day-{{day}} part{{part}} --no-capture
 bench-all:
