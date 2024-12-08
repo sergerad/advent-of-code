@@ -1,74 +1,49 @@
-use std::collections::{HashMap, HashSet};
-
+use glam::IVec2;
 use itertools::Itertools;
+use miette::miette;
+use nom::{
+    bytes::complete::take_till, character::complete::satisfy, multi::many1, sequence::preceded,
+    AsChar, IResult,
+};
+use nom_locate::{position, LocatedSpan};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct Position {
-    x: isize,
-    y: isize,
+pub type Span<'a> = LocatedSpan<&'a str>;
+
+pub fn process(input: &'static str) -> miette::Result<String> {
+    let rows = input.lines().count();
+    let cols = input.lines().next().unwrap().len();
+    let rows = 0i32..rows as i32;
+    let cols = 0i32..cols as i32;
+
+    let (_, mut satellites) = parse(Span::new(input)).map_err(|e| miette!(e))?;
+    satellites.sort_by(|a, b| a.1.cmp(&b.1));
+    let results = satellites
+        .chunk_by(|a, b| a.1 == b.1)
+        .flat_map(|chunk| {
+            chunk.iter().tuple_combinations().flat_map(|(a, b)| {
+                let diff = a.0 - b.0;
+                [a.0 + diff, b.0 - diff]
+            })
+        })
+        .filter(|pos| cols.contains(&pos.x) && rows.contains(&pos.y))
+        .unique()
+        .count();
+    Ok(results.to_string())
 }
 
-#[derive(Debug)]
-struct World {
-    matrix: Vec<Vec<char>>,
-    frequencies: HashMap<char, Vec<Position>>,
+fn parse_alphanum_pos(input: Span) -> IResult<Span, (IVec2, char)> {
+    let (input, pos) = position(input)?;
+    let x = pos.get_column() as i32 - 1;
+    let y = pos.location_line() as i32 - 1;
+    let (input, c) = satisfy(|c| c.is_alphanum())(input)?;
+    Ok((input, (IVec2::new(x, y), c)))
 }
 
-fn parse(input: &str) -> World {
-    let matrix: Vec<Vec<char>> = input.lines().map(|line| line.chars().collect()).collect();
-    let frequencies: HashMap<char, Vec<Position>> =
-        matrix
-            .iter()
-            .enumerate()
-            .fold(HashMap::default(), |frequencies, (y, row)| {
-                row.iter()
-                    .enumerate()
-                    .fold(frequencies, |mut frequencies, (x, c)| {
-                        if c != &'.' {
-                            frequencies.entry(*c).or_default().push(Position {
-                                x: x as isize,
-                                y: y as isize,
-                            });
-                        }
-                        frequencies
-                    })
-            });
-    World {
-        matrix,
-        frequencies,
-    }
-}
-
-#[tracing::instrument]
-pub fn process(input: &str) -> miette::Result<String> {
-    let world = parse(input);
-    let cols = world.matrix[0].len() as isize;
-    let rows = world.matrix.len() as isize;
-    let anti_nodes: HashSet<Position> =
-        world
-            .frequencies
-            .into_iter()
-            .fold(HashSet::default(), |mut anti, (_c, positions)| {
-                positions.iter().tuple_combinations().for_each(|(a, b)| {
-                    let dx = b.x - a.x;
-                    let dy = b.y - a.y;
-
-                    if b.x + dx < cols && b.y + dy < rows {
-                        anti.insert(Position {
-                            x: b.x + dx,
-                            y: b.y + dy,
-                        });
-                    }
-                    if a.x - dx >= 0 && a.y - dy >= 0 {
-                        anti.insert(Position {
-                            x: a.x - dx,
-                            y: a.y - dy,
-                        });
-                    }
-                });
-                anti
-            });
-    Ok(anti_nodes.len().to_string())
+fn parse(input: Span) -> IResult<Span, Vec<(IVec2, char)>> {
+    many1(preceded(
+        take_till(|c: char| c.is_alphanum()),
+        parse_alphanum_pos,
+    ))(input)
 }
 
 #[cfg(test)]
