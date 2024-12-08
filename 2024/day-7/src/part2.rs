@@ -1,5 +1,7 @@
 use itertools::Itertools;
 
+use rayon::prelude::*;
+
 #[derive(Debug, Clone, Copy)]
 enum Operation {
     Add,
@@ -28,7 +30,7 @@ fn parse(input: &str) -> Vec<(u64, Vec<u64>)> {
 pub fn process(input: &str) -> miette::Result<String> {
     let input = parse(input);
     let count: u64 = input
-        .into_iter()
+        .par_iter()
         .filter_map(|(sum, factors)| {
             let count = factors.len() - 1;
             (0..count)
@@ -45,7 +47,7 @@ pub fn process(input: &str) -> miette::Result<String> {
                             Operation::Concat => format!("{}{}", a, b).parse().unwrap(),
                         })
                         .unwrap()
-                        == sum
+                        == *sum
                 })
                 .then_some(sum)
         })
