@@ -5,6 +5,7 @@ use nom::{
     IResult,
 };
 use nom_locate::{position, LocatedSpan};
+use rayon::prelude::*;
 
 pub type Span<'a> = LocatedSpan<&'a str>;
 
@@ -30,7 +31,7 @@ fn parse(input: Span) -> IResult<Span, Vec<Vec<(IVec2, i32)>>> {
 pub fn process(input: &'static str) -> miette::Result<String> {
     let (_, trail_map) = parse(Span::new(input)).map_err(|e| miette::miette!(e))?;
 
-    let trail_peaks = trail_map.iter().flatten().filter(|(_, num)| *num == 9);
+    let trail_peaks = trail_map.par_iter().flatten().filter(|(_, num)| *num == 9);
     let sum: usize = trail_peaks
         .map(|(head_pos, _num)| {
             let mut trails_found = 0;
@@ -51,7 +52,7 @@ fn walk(
     trail_map: &Vec<Vec<(IVec2, i32)>>,
     position: IVec2,
     direction_from: IVec2,
-    _steps: usize,
+    steps: usize,
     trails_found: &mut usize,
 ) {
     [
@@ -72,14 +73,14 @@ fn walk(
         }
         let num = trail_map[position.y as usize][position.x as usize].1;
         let next_num = trail_map[next_pos.y as usize][next_pos.x as usize].1;
-        if _steps == 8 && next_num == 0 {
+        if steps == 8 && next_num == 0 {
             *trails_found += 1;
             return;
         }
         if next_num != num - 1 {
             return;
         }
-        walk(trail_map, next_pos, *direction, _steps + 1, trails_found);
+        walk(trail_map, next_pos, *direction, steps + 1, trails_found);
     });
 }
 

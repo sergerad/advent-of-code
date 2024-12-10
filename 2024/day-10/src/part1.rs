@@ -7,6 +7,7 @@ use nom::{
     IResult,
 };
 use nom_locate::{position, LocatedSpan};
+use rayon::prelude::*;
 
 pub type Span<'a> = LocatedSpan<&'a str>;
 
@@ -32,7 +33,7 @@ fn parse(input: Span) -> IResult<Span, Vec<Vec<(IVec2, i32)>>> {
 pub fn process(input: &'static str) -> miette::Result<String> {
     let (_, trail_map) = parse(Span::new(input)).map_err(|e| miette::miette!(e))?;
 
-    let trail_peaks = trail_map.iter().flatten().filter(|(_, num)| *num == 9);
+    let trail_peaks = trail_map.par_iter().flatten().filter(|(_, num)| *num == 9);
     let sum: usize = trail_peaks
         .map(|(head_pos, _num)| {
             let mut trails_found = HashSet::new();
