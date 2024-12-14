@@ -1,42 +1,59 @@
-use glam::IVec2;
+use glam::UVec2;
 use itertools::Itertools;
 use nom::{
-    bytes::complete::{tag, take, take_until},
-    character::complete::{self, newline},
-    multi::{count, many1, separated_list1},
-    sequence::{delimited, preceded, separated_pair, terminated},
-    IResult,
+    bytes::complete::tag,
+    character::complete::{self, line_ending},
+    multi::{count, separated_list1},
+    sequence::{preceded, separated_pair, terminated, tuple},
+    IResult, Parser,
 };
 
 #[derive(Debug)]
 struct Machine {
-    button_a: IVec2,
-    button_b: IVec2,
-    prize: IVec2,
+    button_a: UVec2,
+    button_b: UVec2,
+    prize: UVec2,
+}
+
+fn parse_button_a(input: &str) -> IResult<&str, UVec2> {
+    preceded(
+        tag("Button A: X+"),
+        separated_pair(complete::u32, tag(", Y+"), complete::u32).map(|(x, y)| UVec2::new(x, y)),
+    )(input)
+}
+
+fn parse_button_b(input: &str) -> IResult<&str, UVec2> {
+    preceded(
+        tag("Button B: X+"),
+        separated_pair(complete::u32, tag(", Y+"), complete::u32).map(|(x, y)| UVec2::new(x, y)),
+    )(input)
+}
+
+fn parse_prize(input: &str) -> IResult<&str, UVec2> {
+    preceded(
+        tag("Prize: X="),
+        separated_pair(complete::u32, tag(", Y="), complete::u32).map(|(x, y)| UVec2::new(x, y)),
+    )(input)
 }
 
 fn parse_machine(input: &str) -> IResult<&str, Machine> {
-    let (input, a_x) = preceded(tag("Button A: X+"), complete::i32)(input)?;
-    let (input, a_y) = preceded(tag(", Y+"), complete::i32)(input)?;
-    let (input, _) = take(1u32)(input)?;
-    let (input, b_x) = preceded(tag("Button B: X+"), complete::i32)(input)?;
-    let (input, b_y) = preceded(tag(", Y+"), complete::i32)(input)?;
+    let (input, (button_a, button_b, prize)) = tuple((
+        terminated(parse_button_a, line_ending),
+        terminated(parse_button_b, line_ending),
+        parse_prize,
+    ))(input)?;
 
-    let (input, _) = take(1u32)(input)?;
-    let (input, prize_x) = preceded(tag("Prize: X="), complete::i32)(input)?;
-    let (input, prize_y) = preceded(tag(", Y="), complete::i32)(input)?;
     Ok((
         input,
         Machine {
-            button_a: IVec2::new(a_x, a_y),
-            button_b: IVec2::new(b_x, b_y),
-            prize: IVec2::new(prize_x, prize_y),
+            button_a,
+            button_b,
+            prize,
         },
     ))
 }
-
 fn parse(input: &str) -> IResult<&str, Vec<Machine>> {
-    many1(terminated(parse_machine, count(newline, 2)))(input)
+    separated_list1(count(line_ending, 2), parse_machine)(input)
 }
 
 #[tracing::instrument]
@@ -48,17 +65,12 @@ pub fn process(_input: &'static str) -> miette::Result<String> {
             let mut tokens_spent = 0;
             for combo_size in 2..200 {
                 let mut smallest_cost: Option<u32> = None;
-                for combo in [(machine.button_a, true), (machine.button_b, false)]
+                for combo in [(machine.button_a, 3), (machine.button_b, 1)]
                     .iter()
                     .combinations_with_replacement(combo_size)
                 {
-                    let (sum, cost) = combo.iter().fold((IVec2::ZERO, 0), |(sum, cost), combo| {
-                        let sum = sum + combo.0;
-                        let cost = match combo.1 {
-                            true => cost + 3,
-                            false => cost + 1,
-                        };
-                        (sum, cost)
+                    let (sum, cost) = combo.iter().fold((UVec2::ZERO, 0), |(sum, cost), combo| {
+                        (sum + combo.0, cost + combo.1)
                     });
                     if sum == machine.prize {
                         tokens_spent += cost;
@@ -105,9 +117,7 @@ Prize: X=7870, Y=6450
 
 Button A: X+69, Y+23
 Button B: X+27, Y+71
-Prize: X=18641, Y=10279
-
-";
+Prize: X=18641, Y=10279";
         assert_eq!("480", process(input)?);
         Ok(())
     }
